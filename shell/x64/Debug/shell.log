@@ -1,2 +1,15 @@
 ﻿  CommandProcessor.cpp
-  shell.vcxproj -> C:\Users\omara\Desktop\OSOS-master\OSOS-master\x64\Debug\shell.exe
+  Converter.cpp
+C:\Users\Youssef Nasr\source\repos\ImpoExpo\shell\Converter.cpp(59,30): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  Directory.cpp
+C:\Users\Youssef Nasr\source\repos\ImpoExpo\shell\Directory.cpp(47,20): warning C4267: 'initializing': conversion from 'size_t' to 'int', possible loss of data
+  Directory_Entry.cpp
+  File_Entry.cpp
+  Mini_FAT.cpp
+  Parser.cpp
+  shell.cpp
+  Tokenizer.cpp
+  Virtual_Disk.cpp
+  Generating Code...
+  LINK : C:\Users\Youssef Nasr\source\repos\ImpoExpo\x64\Debug\shell.exe not found or not built by the last incremental link; performing full link
+  shell.vcxproj -> C:\Users\Youssef Nasr\source\repos\ImpoExpo\x64\Debug\shell.exe

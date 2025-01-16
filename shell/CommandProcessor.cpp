@@ -227,14 +227,19 @@ CommandProcessor::CommandProcessor(Directory** currentDirPtr)
 
 void CommandProcessor::processCommand(const string& input, bool& isRunning)
 {
-    // Add command to history
-    if (!input.empty())
+    // Trim spaces from the input
+    string trimmedInput = input;
+    trimmedInput.erase(0, trimmedInput.find_first_not_of(" \t\r\n")); // Trim leading spaces
+    trimmedInput.erase(trimmedInput.find_last_not_of(" \t\r\n") + 1); // Trim trailing spaces
+
+    // Add trimmed command to history
+    if (!trimmedInput.empty())
     {
-        commandHistory.push_back(input);
+        commandHistory.push_back(trimmedInput);
     }
 
-    // Tokenize the input
-    vector<string> tokens = Tokenizer::tokenize(input);
+    // Tokenize the trimmed input
+    vector<string> tokens = Tokenizer::tokenize(trimmedInput);
 
     if (tokens.empty())
     {
@@ -253,35 +258,29 @@ void CommandProcessor::processCommand(const string& input, bool& isRunning)
     {
         if (cmd.arguments.empty())
         {
-            // Test Case (1): Type 'help'
             showGeneralHelp();
         }
         else if (cmd.arguments.size() == 1)
         {
-            // Test Case (2) and (3): Type 'help [command]'
             showCommandHelp(cmd.arguments[0]);
         }
         else
         {
-            // Invalid syntax
             cout << "Error: Invalid syntax for help command.\n";
             cout << "Usage:\n"
                 << "  help\n"
                 << "  help [command]\n";
         }
     }
-   
     else if (cmd.name == "del")
     {
         if (cmd.arguments.empty())
         {
-            // Case (1): Invalid syntax
             cout << "Error: Invalid syntax for del command.\n";
             cout << "Usage: del [file|directory]+ (e.g., del file1.txt dir1 file2.txt)\n";
         }
         else
         {
-            // Handle 'del' with one or more file/directory arguments
             handleDel(cmd.arguments);
         }
     }
@@ -297,9 +296,7 @@ void CommandProcessor::processCommand(const string& input, bool& isRunning)
             cout << "  copy [source] [destination]\n";
         }
     }
-
-    
-    else if (cmd.name == "rename") // Handling 'rename' command
+    else if (cmd.name == "rename")
     {
         if (cmd.arguments.size() == 2)
         {
@@ -311,11 +308,11 @@ void CommandProcessor::processCommand(const string& input, bool& isRunning)
             cout << "Usage: rename [fileName] [new fileName]\n";
         }
     }
-    else if (cmd.name == "type") // Handling 'type' command
+    else if (cmd.name == "type")
     {
         if (!cmd.arguments.empty())
         {
-            handleType(cmd.arguments); // Pass the entire list of arguments
+            handleType(cmd.arguments);
         }
         else
         {
@@ -323,8 +320,7 @@ void CommandProcessor::processCommand(const string& input, bool& isRunning)
             cout << "Usage: type [file_path]+ (one or more file paths)\n";
         }
     }
-
-    else if (cmd.name == "write") // Handling 'write' command
+    else if (cmd.name == "write")
     {
         if (cmd.arguments.size() == 1)
         {
@@ -352,32 +348,32 @@ void CommandProcessor::processCommand(const string& input, bool& isRunning)
     {
         if (cmd.arguments.empty())
         {
-            // Type 'dir' without arguments
             handleDir("");
         }
         else if (cmd.arguments.size() == 1)
         {
-            // Type 'dir [path]'
             handleDir(cmd.arguments[0]);
         }
         else
         {
-            // Invalid syntax
             cout << "Error: Invalid syntax for dir command.\n";
             cout << "Usage:\n"
                 << "  dir\n"
                 << "  dir [path]\n";
         }
     }
-    else if (cmd.name == "import") {
-        if (!cmd.arguments.empty()) {
+    else if (cmd.name == "import")
+    {
+        if (!cmd.arguments.empty())
+        {
             handleImport(cmd.arguments);
         }
-        else {
+        else
+        {
             cout << "Error: Invalid syntax for import command.\n";
             cout << "Usage:\n  import [source]\n  import [source] [destination]\n";
         }
-        }
+    }
     else if (cmd.name == "md")
     {
         if (cmd.arguments.size() == 1)
@@ -390,7 +386,6 @@ void CommandProcessor::processCommand(const string& input, bool& isRunning)
             cout << "Usage: md [directory_name]\n";
         }
     }
-   
     else if (cmd.name == "cd")
     {
         if (cmd.arguments.size() <= 1)
@@ -422,7 +417,6 @@ void CommandProcessor::processCommand(const string& input, bool& isRunning)
         }
         else
         {
-            // Invalid syntax
             cout << "Error: Invalid syntax for 'history' command.\n";
             cout << "Usage: history\n";
         }
@@ -435,27 +429,22 @@ void CommandProcessor::processCommand(const string& input, bool& isRunning)
         }
         else
         {
-            // Concatenate the entire input to display the unknown command
-            cout << "Error: Unknown command '" << input << "'. Type 'help' to see available commands.\n";
+            cout << "Error: Unknown command '" << trimmedInput << "'. Type 'help' to see available commands.\n";
         }
     }
-
-    else if (cmd.name == "export") {
-
+    else if (cmd.name == "export")
+    {
         handleExport(cmd.arguments);
     }
-
     else if (cmd.name == "rd")
     {
         if (cmd.arguments.empty())
         {
-            // Test Case (1): Type 'rd' without arguments
             cout << "Error: Invalid syntax for rd command.\n";
             cout << "Usage: rd [directory]+\n";
         }
         else
         {
-            // Handle 'rd' with one or more directory arguments
             handleRd(cmd.arguments);
         }
     }
@@ -467,7 +456,6 @@ void CommandProcessor::processCommand(const string& input, bool& isRunning)
         }
         else
         {
-            // Concatenate the entire input to display the unknown command
             cout << "Error: Incorrect syntax for 'quit' command.\n";
             cout << "Usage: quit\n";
         }
@@ -527,21 +515,33 @@ void CommandProcessor::handleCls()
 }
 void CommandProcessor::handleMd(const string& dirPath)
 {
+    // Trim spaces from the input
+    string trimmedPath = dirPath;
+    trimmedPath.erase(0, trimmedPath.find_first_not_of(" \t\r\n")); // Trim leading spaces
+    trimmedPath.erase(trimmedPath.find_last_not_of(" \t\r\n") + 1); // Trim trailing spaces
+
+    // If the trimmed input is empty, show the syntax error message
+    if (trimmedPath.empty()) {
+        cout << "Error: Invalid syntax for md command.\n";
+        cout << "Usage: md [directory_name]\n";
+        return;
+    }
+
     // 1. Parse the path to separate parent path and directory name
     string parentPath;
     string dirName;
 
-    size_t lastSlash = dirPath.find_last_of("/\\");
+    size_t lastSlash = trimmedPath.find_last_of("/\\");
     if (lastSlash == string::npos)
     {
         // Directory to be created in the current directory
         parentPath = "";
-        dirName = dirPath;
+        dirName = trimmedPath;
     }
     else
     {
-        parentPath = dirPath.substr(0, lastSlash);
-        dirName = dirPath.substr(lastSlash + 1);
+        parentPath = trimmedPath.substr(0, lastSlash);
+        dirName = trimmedPath.substr(lastSlash + 1);
     }
 
     // 2. Navigate to the parent directory
@@ -620,6 +620,7 @@ void CommandProcessor::handleMd(const string& dirPath)
 
     cout << "Directory '" << cleanedName << "' created successfully.\n";
 }
+
 
 
 void CommandProcessor::handleRd(const vector<string>& directories)
@@ -1141,35 +1142,19 @@ void CommandProcessor::handleDir(const std::string& path)
 
 void CommandProcessor::handleEcho(const std::string& filePath)
 {
-    // 1. Make a modifiable copy of filePath
+    // 1. Trim leading and trailing spaces from filePath
     std::string trimmed = filePath;
+    trimmed.erase(0, trimmed.find_first_not_of(" \t\r\n")); // Trim leading spaces
+    trimmed.erase(trimmed.find_last_not_of(" \t\r\n") + 1); // Trim trailing spaces
 
-    // 2. Trim leading spaces
-    size_t firstPos = trimmed.find_first_not_of(' ');
-    if (firstPos != std::string::npos) {
-        trimmed.erase(0, firstPos);
-    }
-    else {
-        trimmed.clear();
-    }
-
-    // 3. Trim trailing spaces
-    size_t lastPos = trimmed.find_last_not_of(' ');
-    if (lastPos != std::string::npos) {
-        trimmed.erase(lastPos + 1);
-    }
-    else {
-        trimmed.clear();
-    }
-
-    // 4. Check if trimmed is empty
+    // 2. Check if trimmed is empty
     if (trimmed.empty()) {
         std::cout << "Error: Invalid syntax for echo command.\n"
             << "Usage: echo [file_path]\n";
         return;
     }
 
-    // 5. Parse the path to get parent directory and file name
+    // 3. Parse the path to get parent directory and file name
     std::string parentPath;
     std::string fileName;
     size_t lastSlash = trimmed.find_last_of("/\\");
@@ -1182,20 +1167,19 @@ void CommandProcessor::handleEcho(const std::string& filePath)
         fileName = trimmed.substr(lastSlash + 1);
     }
 
-    // 6. Validate file name
+    // 4. Validate file name
     if (!isValidFileName(fileName)) {
         std::cout << "Error: Invalid file name '" << fileName << "'.\n";
         return;
     }
 
-    // 7. Check for extension and append .txt if missing
+    // 5. Check for extension and append .txt if missing
     size_t dotPos = fileName.find_last_of('.');
     if (dotPos == std::string::npos || dotPos == 0 || dotPos == fileName.length() - 1) {
-        // No extension found or dot is at the start/end => append .txt
-        fileName += ".txt";
+        fileName += ".txt"; // Append .txt if no valid extension is found
     }
 
-    // 8. Navigate to parent directory
+    // 6. Navigate to parent directory
     Directory* parentDir = nullptr;
     if (parentPath.empty()) {
         parentDir = *currentDirectoryPtr;
@@ -1208,9 +1192,8 @@ void CommandProcessor::handleEcho(const std::string& filePath)
         }
     }
 
-    // 9. Check for duplicates (case-insensitive comparison)
-    for (const auto& entry : parentDir->DirOrFiles)
-    {
+    // 7. Check for duplicates (case-insensitive comparison)
+    for (const auto& entry : parentDir->DirOrFiles) {
         std::string existingName = entry.getName();
         std::string newName = fileName;
 
@@ -1220,26 +1203,24 @@ void CommandProcessor::handleEcho(const std::string& filePath)
         std::transform(newName.begin(), newName.end(), newName.begin(),
             [](unsigned char c) { return std::tolower(c); });
 
-        if (existingName == newName)
-        {
+        if (existingName == newName) {
             std::cout << "Error: File '" << fileName << "' already exists.\n";
             return;
         }
     }
 
-    // 10. Create the file entry with fileName, dir_attr = 0x00 (file)
+    // 8. Create the file entry with fileName, dir_attr = 0x00 (file)
     Directory_Entry newFileEntry(fileName, 0x00, /*firstCluster=*/0);
     newFileEntry.setIsFile(true); // Mark as a file
 
-    // 11. Add the new file to the parent directory
+    // 9. Add the new file to the parent directory
     parentDir->DirOrFiles.push_back(newFileEntry);
 
-    // 12. Persist changes
+    // 10. Persist changes
     parentDir->writeDirectory();
 
     std::cout << "File '" << newFileEntry.getName() << "' created successfully.\n";
 }
-
 
 
 
@@ -1289,11 +1270,12 @@ void CommandProcessor::handleWrite(const string& filePath)
 
     // 4. Search for the file in the parent directory
     bool fileFound = false;
+    string lowerFileName = toLower(fileName); // Convert input file name to lowercase
+
     for (auto& entry : parentDir->DirOrFiles) // Iterate by reference
     {
-        if (entry.getName() == fileName)
+        if (toLower(entry.getName()) == lowerFileName) // Compare in lowercase
         {
-
             if (!entry.getIsFile())
             {
                 cout << "Error: '" << fileName << "' is a directory, not a file.\n";
@@ -1403,10 +1385,13 @@ void CommandProcessor::handleType(const vector<string>& filePaths) {
             continue; // Proceed to the next file
         }
 
+        // Convert the file name to lowercase for case-insensitive comparison
+        string lowerFileName = toLower(fileName);
+
         // Search for the file in the parent directory
         bool fileFound = false;
         for (const auto& entry : parentDir->DirOrFiles) {
-            if (entry.getName() == fileName) {
+            if (toLower(entry.getName()) == lowerFileName) {
                 if (!entry.getIsFile()) {
                     cout << "Error: '" << fileName << "' is a directory, not a file.\n";
                     fileFound = true; // Mark as found to avoid general not found message
@@ -1426,6 +1411,7 @@ void CommandProcessor::handleType(const vector<string>& filePaths) {
         }
     }
 }
+
 
 void CommandProcessor::handleDel(const vector<string>& targets)
 {
