@@ -970,13 +970,13 @@ Directory* CommandProcessor::MoveToDir(const std::string& path) {
     std::string normalizedPath = path;
 
     // Normalize path separators to '\\'
-    replace(normalizedPath.begin(), normalizedPath.end(), '/', '\\');
+    std::replace(normalizedPath.begin(), normalizedPath.end(), '/', '\\');
 
     // Split the path by '\\'
-    vector<string> dirs;
-    stringstream ss(normalizedPath);
-    string token;
-    while (getline(ss, token, '\\')) {
+    std::vector<std::string> dirs;
+    std::stringstream ss(normalizedPath);
+    std::string token;
+    while (std::getline(ss, token, '\\')) {
         if (!token.empty()) {
             dirs.push_back(token);
         }
@@ -984,15 +984,15 @@ Directory* CommandProcessor::MoveToDir(const std::string& path) {
 
     // Check if the path is empty
     if (dirs.empty()) {
-        cout << "Error: Path is empty.\n";
+        std::cout << "Error: Path is empty.\n";
         return nullptr;
     }
 
     // Start at the current directory
     Directory* current = *currentDirectoryPtr;
 
-    // Handle root navigation
-    string rootDrive = current->getDrive() + ":";
+    // Handle root navigation (e.g., "C:")
+    std::string rootDrive = toUpper(current->getDrive()) + ":";
     if (toUpper(dirs[0]) == toUpper(rootDrive)) {
         while (current->parent != nullptr) {
             current = current->parent; // Move to root
@@ -1004,27 +1004,28 @@ Directory* CommandProcessor::MoveToDir(const std::string& path) {
     for (const auto& dirName : dirs) {
         int dirIndex = current->searchDirectory(dirName);
         if (dirIndex == -1) {
-            cout << "Error: Directory '" << dirName << "' not found in '" << current->getFullPath() << "'.\n";
+            std::cout << "Error: Directory '" << dirName << "' not found in '" << current->getFullPath() << "'.\n";
             return nullptr;
         }
 
         Directory_Entry& entry = current->DirOrFiles[dirIndex];
-        if (entry.dir_attr != 0x10) { // Not a directory
-            cout << "Error: '" << dirName << "' is not a directory.\n";
+        if (entry.dir_attr != 0x10) { // 0x10 represents directory attribute
+            std::cout << "Error: '" << dirName << "' is not a directory.\n";
             return nullptr;
         }
 
         // Move to the subdirectory
         current = entry.subDirectory;
         if (!current) {
-            cout << "Error: Subdirectory '" << dirName << "' is not accessible.\n";
+            std::cout << "Error: Subdirectory '" << dirName << "' is not accessible.\n";
             return nullptr;
         }
+
+        std::cout << "Navigated to directory: " << current->getFullPath() << "\n";
     }
 
     return current;
 }
-
 void CommandProcessor::handleDir(const std::string& path)
 {
     // 1. Determine which directory to list
@@ -2006,99 +2007,10 @@ void CommandProcessor::handleCopy(const vector<string>& args)
 }
 
 
-void CommandProcessor::handleExport(const vector<string>& args)
-{
-    // Check if arguments are provided
-    if (args.empty())
-    {
-        cout << "Error: Invalid syntax for export command.\n";
-        cout << "Usage: export [source] [destination]\n";
-        return;
-    }
-
-    string sourcePath = args[0];
-    string destinationPath = args.size() > 1 ? args[1] : ""; // Optional destination
-
-    // Locate the source in the virtual disk
-    Directory* parentDir = nullptr;
-    string fileName;
-
-    // Parse source path
-    size_t lastSlash = sourcePath.find_last_of("/\\");
-    if (lastSlash == string::npos)
-    {
-        // Source is in the current directory
-        parentDir = *currentDirectoryPtr;
-        fileName = sourcePath;
-    }
-    else
-    {
-        // Source includes directories
-        string parentPath = sourcePath.substr(0, lastSlash);
-        fileName = sourcePath.substr(lastSlash + 1);
-        parentDir = MoveToDir(parentPath);
-    }
-
-    // Check if source directory exists
-    if (!parentDir)
-    {
-        cout << "Error: Source path '" << sourcePath << "' does not exist.\n";
-        return;
-    }
-
-    // Search for the file in the directory
-    int entryIndex = parentDir->searchDirectory(fileName);
-    if (entryIndex == -1)
-    {
-        cout << "Error: Source '" << fileName << "' does not exist in the virtual disk.\n";
-        return;
-    }
-
-    Directory_Entry& entry = parentDir->DirOrFiles[entryIndex];
-
-    // Handle file export
-    if (entry.getIsFile())
-    {
-        File_Entry file(entry, parentDir);
-        file.readFileContent();
-
-        if (destinationPath.empty())
-        {
-            // Export to current executable directory with the same name
-            destinationPath = file.getName();
-        }
-        else
-        {
-            // Check if destination is a directory
-            if (destinationPath.back() == '\\' || destinationPath.back() == '/')
-            {
-                destinationPath += file.getName(); // Append the file name
-            }
-        }
-
-        // Export the file to the destination
-        ofstream outFile(destinationPath, ios::binary);
-        if (!outFile)
-        {
-            cout << "Error: Unable to write to destination file '" << destinationPath << "'.\n";
-            return;
-        }
-
-        outFile << file.getContent();
-        outFile.close();
-
-        cout << "File '" << file.getName() << "' exported successfully to '" << destinationPath << "'.\n";
-    }
-    else
-    {
-        cout << "Error: Exporting directories is not supported in this implementation.\n";
-    }
-}
-
 void CommandProcessor::handleImport(const std::vector<std::string>& args) {
     // Check for correct number of arguments
     if (args.empty() || args.size() > 2) {
-        // Case (1): Syntax error
+        // Syntax error
         std::cout << "Error: Invalid syntax for import command.\n";
         std::cout << "Usage:\n  import [source]\n  import [source] [destination]\n";
         return;
@@ -2107,11 +2019,11 @@ void CommandProcessor::handleImport(const std::vector<std::string>& args) {
     std::string source = args[0];
     std::string destination = (args.size() == 2) ? args[1] : "";
 
-    // Resolve the source path
+    // Resolve the source path using filesystem library
     fs::path sourcePath(source);
     if (!sourcePath.is_absolute()) {
         // First, check in the current directory of the virtual disk
-        fs::path currentDirPath = (*currentDirectoryPtr)->getFullPath();
+        fs::path currentDirPath = fs::path((*currentDirectoryPtr)->getFullPath());
         fs::path potentialPath = currentDirPath / sourcePath;
         if (fs::exists(potentialPath)) {
             sourcePath = potentialPath;
@@ -2143,43 +2055,130 @@ void CommandProcessor::handleImport(const std::vector<std::string>& args) {
 
     // Handle if source is a directory: import all .txt files
     if (fs::is_directory(sourcePath)) {
-        Directory* targetDir = *currentDirectoryPtr; // Current directory
+        Directory* targetDir = *currentDirectoryPtr; // Start with current directory
 
         // Determine the target directory based on destination
         if (!destination.empty()) {
             fs::path destPath(destination);
-            if (fs::exists(destPath)) {
-                if (fs::is_directory(destPath)) {
-                    // Destination is an existing directory: navigate to it
-                    Directory* destDir = MoveToDir(destination);
-                    if (destDir == nullptr) {
-                        std::cout << "Error: Destination directory '" << destination << "' does not exist.\n";
+            // Normalize destination path by removing trailing slashes
+            destPath = destPath.lexically_normal();
+
+            if (destPath.is_absolute()) {
+                if (fs::exists(destPath)) {
+                    if (fs::is_directory(destPath)) {
+                        // Destination is an existing directory: navigate to it
+                        Directory* destDir = MoveToDir(destPath.string());
+                        if (destDir == nullptr) {
+                            std::cout << "Error: Destination directory '" << destination << "' does not exist or is not correctly linked.\n";
+                            return;
+                        }
+                        targetDir = destDir;
+                    }
+                    else {
+                        std::cout << "Error: Destination path '" << destination << "' is not a directory.\n";
                         return;
                     }
-                    targetDir = destDir;
                 }
                 else {
-                    std::cout << "Error: Destination path '" << destination << "' is not a directory.\n";
-                    return;
+                    // Destination directory does not exist: need to create it
+                    // Extract parent path and directory name
+                    fs::path parentPath = destPath.parent_path();
+                    std::string dirName = destPath.filename().string();
+                    if (dirName.empty()) {
+                        std::cout << "Error: Destination directory name is empty.\n";
+                        return;
+                    }
+
+                    Directory* parentDir = nullptr;
+                    if (parentPath.empty()) {
+                        // Destination is directly under the current directory
+                        parentDir = *currentDirectoryPtr;
+                    }
+                    else {
+                        // Navigate to the parent directory
+                        parentDir = MoveToDir(parentPath.string());
+                        if (parentDir == nullptr) {
+                            std::cout << "Error: Parent directory '" << parentPath.string() << "' does not exist.\n";
+                            return;
+                        }
+                    }
+
+                    // Check if directory with the same name already exists in parent
+                    bool dirExists = false;
+                    Directory* existingDir = nullptr;
+                    for (const auto& entry : parentDir->DirOrFiles) {
+                        if (!entry.getIsFile() && toLower(entry.getName()) == toLower(dirName)) {
+                            dirExists = true;
+                            existingDir = entry.subDirectory;
+                            break;
+                        }
+                    }
+
+                    if (dirExists && existingDir != nullptr) {
+                        std::cout << "Directory '" << destination << "' already exists.\n";
+                        targetDir = existingDir;
+                    }
+                    else {
+                        // Create the directory
+                        char dir_attr = 0x10;               // Directory attribute
+                        int dir_firstCluster = 0;           // First cluster (use 0 if not applicable)
+                        Directory* newDir = new Directory(dirName, dir_attr, dir_firstCluster, parentDir);
+
+                        // Create a new Directory_Entry for the new directory
+                        Directory_Entry newDirEntry(dirName, 0x10, 0);
+                        newDirEntry.setIsFile(false);          // Mark as directory
+                        newDirEntry.subDirectory = newDir;     // Link the Directory object
+
+                        // Add the new directory entry to the parent directory
+                        parentDir->addEntry(newDirEntry);
+                        parentDir->writeDirectory();           // Persist changes
+
+                        targetDir = newDir;                    // Set the target directory to the newly created directory
+                        std::cout << "Directory '" << destination << "' created successfully.\n";
+                    }
                 }
             }
             else {
-                // Destination directory does not exist: create it
-                char dir_attr = 0x10;               // Directory attribute
-                int dir_firstCluster = 0;           // First cluster (use 0 if not applicable)
-                Directory* newDir = new Directory(destination, dir_attr, dir_firstCluster, targetDir);
+                // Destination is a relative directory name (e.g., "omar")
+                std::string dirName = destPath.string();
+                if (dirName.empty()) {
+                    std::cout << "Error: Destination directory name is empty.\n";
+                    return;
+                }
 
-                // Create a new Directory_Entry for the new directory
-                Directory_Entry newDirEntry(destination, 0x10, 0);
-                newDirEntry.setIsFile(false);          // Mark as directory
-                newDirEntry.subDirectory = newDir;     // Link the Directory object
+                // Check if the directory already exists in the current directory
+                bool dirExists = false;
+                Directory* existingDir = nullptr;
+                for (const auto& entry : targetDir->DirOrFiles) {
+                    if (!entry.getIsFile() && toLower(entry.getName()) == toLower(dirName)) {
+                        dirExists = true;
+                        existingDir = entry.subDirectory;
+                        break;
+                    }
+                }
 
-                // Add the new directory entry to the target directory
-                targetDir->addEntry(newDirEntry);
-                targetDir->writeDirectory();           // Persist changes
+                if (dirExists && existingDir != nullptr) {
+                    std::cout << "Directory '" << destination << "' already exists.\n";
+                    targetDir = existingDir;
+                }
+                else {
+                    // Create the directory
+                    char dir_attr = 0x10;               // Directory attribute
+                    int dir_firstCluster = 0;           // First cluster (use 0 if not applicable)
+                    Directory* newDir = new Directory(dirName, dir_attr, dir_firstCluster, targetDir);
 
-                targetDir = newDir;                    // Set the target directory to the newly created directory
-                std::cout << "Directory '" << destination << "' created successfully.\n";
+                    // Create a new Directory_Entry for the new directory
+                    Directory_Entry newDirEntry(dirName, 0x10, 0);
+                    newDirEntry.setIsFile(false);          // Mark as directory
+                    newDirEntry.subDirectory = newDir;     // Link the Directory object
+
+                    // Add the new directory entry to the target directory
+                    targetDir->addEntry(newDirEntry);
+                    targetDir->writeDirectory();           // Persist changes
+
+                    targetDir = newDir;                    // Set the target directory to the newly created directory
+                    std::cout << "Directory '" << destination << "' created successfully.\n";
+                }
             }
         }
 
@@ -2213,12 +2212,7 @@ void CommandProcessor::handleImport(const std::vector<std::string>& args) {
                 int existingFileIndex = -1;
                 for (size_t i = 0; i < targetDir->DirOrFiles.size(); ++i) {
                     // Case-insensitive comparison
-                    std::string existingName = targetDir->DirOrFiles[i].getName();
-                    std::string existingNameLower = existingName;
-                    std::string fileNameLower = fileName;
-                    std::transform(existingNameLower.begin(), existingNameLower.end(), existingNameLower.begin(), ::tolower);
-                    std::transform(fileNameLower.begin(), fileNameLower.end(), fileNameLower.begin(), ::tolower);
-                    if (existingNameLower == fileNameLower) {
+                    if (toLower(targetDir->DirOrFiles[i].getName()) == toLower(fileName)) {
                         fileExists = true;
                         existingFileIndex = static_cast<int>(i);
                         break;
@@ -2246,6 +2240,8 @@ void CommandProcessor::handleImport(const std::vector<std::string>& args) {
                 std::string fileContent((std::istreambuf_iterator<char>(inputFile)), std::istreambuf_iterator<char>());
                 inputFile.close();
 
+                // Debug Statement
+
                 if (fileExists && existingFileIndex != -1) {
                     // Overwrite the existing file's content
                     Directory_Entry& existingEntry = targetDir->DirOrFiles[existingFileIndex];
@@ -2271,5 +2267,132 @@ void CommandProcessor::handleImport(const std::vector<std::string>& args) {
 
         // Display the total number of files imported
         std::cout << "Total files imported: " << importedFileCount << "\n";
+    }
+}
+
+
+
+void CommandProcessor::handleExport(const std::vector<std::string>& args) {
+    if (args.size() < 1 || args.size() > 2) {
+        std::cout << "Error: Invalid syntax for export command.\n";
+        std::cout << "Usage: export [source_file_or_directory] [destination_file_or_directory]\n";
+        return;
+    }
+
+    std::string sourcePath = args[0];
+    std::string destinationPath = (args.size() == 2) ? args[1] : fs::current_path().string();
+
+    Directory* currentDir = *currentDirectoryPtr;
+    Directory_Entry* sourceEntry = nullptr;
+
+    bool isSourceAbsolutePath = (sourcePath.length() >= 3 && isalpha(sourcePath[0]) && sourcePath[1] == ':' && (sourcePath[2] == '\\' || sourcePath[2] == '/'));
+
+    // Resolve source path
+    if (isSourceAbsolutePath) {
+        std::string dirPath = sourcePath.substr(0, sourcePath.find_last_of("\\/"));
+        std::string entryName = sourcePath.substr(sourcePath.find_last_of("\\/") + 1);
+
+        Directory* resolvedDir = MoveToDir(dirPath);
+        if (!resolvedDir) {
+            std::cout << "Error: Directory '" << dirPath << "' does not exist.\n";
+            return;
+        }
+
+        int entryIndex = resolvedDir->searchDirectory(entryName);
+        if (entryIndex == -1) {
+            std::cout << "Error: File or directory '" << entryName << "' does not exist in '" << dirPath << "'.\n";
+            return;
+        }
+
+        sourceEntry = &resolvedDir->DirOrFiles[entryIndex];
+    }
+    else {
+        int entryIndex = currentDir->searchDirectory(sourcePath);
+        if (entryIndex == -1) {
+            std::cout << "Error: File or directory '" << sourcePath << "' does not exist in the current directory.\n";
+            return;
+        }
+
+        sourceEntry = &currentDir->DirOrFiles[entryIndex];
+    }
+
+    int exportedFiles = 0; // Counter for exported files
+
+    // Check if source is a directory
+    if (sourceEntry->dir_attr == 0x10) { // Directory
+        Directory sourceDir(sourceEntry->getName(), sourceEntry->dir_attr, sourceEntry->dir_firstCluster, currentDir);
+        sourceDir.readDirectory();
+
+        for (const auto& entry : sourceDir.DirOrFiles) {
+            if (entry.dir_attr != 0x10) { // Export files only
+                File_Entry file(entry, &sourceDir);
+                file.readFileContent();
+
+                std::string destinationFilePath = (fs::path(destinationPath) / entry.getName()).string();
+
+                // Check for overwrite
+                if (fs::exists(destinationFilePath)) {
+                    std::cout << "File '" << destinationFilePath << "' already exists. Overwrite? (yes/no): ";
+                    std::string choice;
+                    std::getline(std::cin, choice);
+                    std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
+                    if (choice != "yes") {
+                        std::cout << "Skipping '" << entry.getName() << "'.\n";
+                        continue;
+                    }
+                }
+
+                std::ofstream outFile(destinationFilePath, std::ios::binary);
+                if (!outFile.is_open()) {
+                    std::cout << "Error: Unable to open destination file '" << destinationFilePath << "'.\n";
+                    continue;
+                }
+
+                outFile.write(file.content.c_str(), file.content.size());
+                outFile.close();
+
+                exportedFiles++;
+            }
+        }
+
+        std::cout << "Total files exported from '" << sourceDir.getFullPath() << "': " << exportedFiles << "\n";
+        return;
+    }
+
+    // If source is a single file
+    if (sourceEntry->dir_attr != 0x10) {
+        File_Entry file(*sourceEntry, currentDir);
+        file.readFileContent();
+
+        std::string destinationFilePath = destinationPath;
+        if (fs::is_directory(destinationPath)) {
+            destinationFilePath = (fs::path(destinationPath) / sourceEntry->getName()).string();
+        }
+
+        // Check for overwrite
+        if (fs::exists(destinationFilePath)) {
+            std::cout << "File '" << destinationFilePath << "' already exists. Overwrite? (yes/no): ";
+            std::string choice;
+            std::getline(std::cin, choice);
+            std::transform(choice.begin(), choice.end(), choice.begin(), ::tolower);
+            if (choice != "yes") {
+                std::cout << "Export canceled for '" << sourceEntry->getName() << "'.\n";
+                return;
+            }
+        }
+
+        std::ofstream outFile(destinationFilePath, std::ios::binary);
+        if (!outFile.is_open()) {
+            std::cout << "Error: Unable to open destination file '" << destinationFilePath << "'.\n";
+            return;
+        }
+
+        outFile.write(file.content.c_str(), file.content.size());
+        outFile.close();
+
+        exportedFiles++;
+        std::cout << "File '" << sourceEntry->getName() << "' exported successfully to '" << destinationFilePath << "'.\n";
+        std::cout << "Total files exported: " << exportedFiles << "\n";
+        return;
     }
 }

@@ -145,7 +145,9 @@ string Directory_Entry::getContent() const {
 
 void Directory_Entry::setContent(const string& newContent) {
     content = newContent;
+    dir_fileSize = static_cast<int>(newContent.size()); // Update file size
 }
+
 
 int Directory_Entry::getSize() const
 {

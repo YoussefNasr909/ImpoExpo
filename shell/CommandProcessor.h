@@ -42,7 +42,7 @@ private:
     void handleRename(const vector<string>& args);
     void handleCopy(const vector<string>& args);
     void handleExport(const vector<string>& args);
-    void handleImport(const vector<string>& args);
+    void handleImport(const std::vector<std::string>& args);
     Directory* MoveToDir(const string& path);
     File_Entry* MoveToFile(string& path);
     vector<string> commandHistory;

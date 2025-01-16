@@ -22,6 +22,7 @@ int main()
 
     // Create the root directory "C:\"
     Directory* rootDir = new Directory("C:", 0x10, 0, nullptr);
+    rootDir->name = "C:";
 
     rootDir->readDirectory(); 
 
